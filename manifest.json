@@ -13,7 +13,7 @@
   "icons": [
   {
     "src": "SmallTile.scale-100.png",
-    "sizes": "100x00",
+    "sizes": "100x100",
     "type": "image/png"
   },
   {
