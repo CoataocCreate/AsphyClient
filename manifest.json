@@ -9,7 +9,7 @@
   "start_url": "https://coataoccreate.github.io/AsphyClient/",
   "theme_color": "#ffffff",
   "id": "Asphy",
-  "description": "Asphyclient"
+  "description": "Asphyclient",
   "icons": [
   {
     "src": "SmallTile.scale-100.png",
