@@ -12,15 +12,26 @@
         overflow: hidden;
     }
 
-    /* Desktop */
     #desktop {
         width: 100vw;
         height: 100vh;
         background: linear-gradient(120deg, #0f172a, #1e293b);
         position: relative;
+        display: flex;
+        flex-wrap: wrap;
+        align-content: flex-start;
     }
 
-    /* Taskbar */
+    /* Icons like mobile grid */
+    .icon {
+        width: 80px;
+        color: white;
+        text-align: center;
+        margin: 15px;
+        cursor: pointer;
+        user-select: none;
+    }
+
     #taskbar {
         position: absolute;
         bottom: 0;
@@ -33,32 +44,34 @@
         color: white;
     }
 
-    /* Window */
+    /* Window now responsive */
     .window {
         position: absolute;
-        width: 500px;
-        height: 300px;
+        width: min(600px, 95vw);
+        height: min(400px, 70vh);
         background: #0b1220;
         border: 1px solid #334155;
-        border-radius: 8px;
+        border-radius: 10px;
         overflow: hidden;
         box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
 
     .titlebar {
         background: #1f2937;
-        padding: 5px;
-        cursor: move;
+        padding: 8px;
+        cursor: grab;
         display: flex;
         justify-content: space-between;
         color: white;
+        user-select: none;
     }
 
     .content {
         padding: 10px;
         color: #22c55e;
-        height: calc(100% - 30px);
+        height: calc(100% - 35px);
         overflow-y: auto;
+        font-size: 14px;
     }
 
     input {
@@ -68,14 +81,22 @@
         color: #22c55e;
         outline: none;
         font-family: monospace;
+        font-size: 14px;
     }
 
-    .icon {
-        width: 80px;
-        color: white;
-        text-align: center;
-        margin: 10px;
-        cursor: pointer;
+    /* Mobile fullscreen behavior */
+    @media (max-width: 600px) {
+        .window {
+            width: 100vw;
+            height: calc(100vh - 40px);
+            top: 0 !important;
+            left: 0 !important;
+            border-radius: 0;
+        }
+
+        #taskbar {
+            height: 40px;
+        }
     }
 </style>
 </head>
