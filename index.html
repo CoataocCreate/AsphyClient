@@ -2,248 +2,235 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Fake Linux OS</title>
-<link rel="manifest" href="manifest.json">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LunaOS Terminal+</title>
+
 <style>
-    body {
-        margin: 0;
-        font-family: monospace;
-        background: #0f172a;
-        overflow: hidden;
-    }
+:root {
+    --bg:#0d0d0d;
+    --text:#e6e6e6;
+    --dim:#9aa0a6;
+    --path:#58a6ff;
+    --cmd:#7ee787;
+    --err:#ff6b6b;
+    --dir:#1f6feb;
+}
 
-    #desktop {
-        width: 100vw;
-        height: 100vh;
-        background: linear-gradient(120deg, #0f172a, #1e293b);
-        position: relative;
-        display: flex;
-        flex-wrap: wrap;
-        align-content: flex-start;
-    }
+body,html{
+    margin:0;
+    height:100%;
+    background:var(--bg);
+    color:var(--text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono";
+}
 
-    /* Icons like mobile grid */
-    .icon {
-        width: 80px;
-        color: white;
-        text-align: center;
-        margin: 15px;
-        cursor: pointer;
-        user-select: none;
-    }
+#terminal{
+    height:100%;
+    padding:18px;
+    overflow-y:auto;
+    box-sizing:border-box;
+}
 
-    #taskbar {
-        position: absolute;
-        bottom: 0;
-        width: 100%;
-        height: 40px;
-        background: #111827;
-        display: flex;
-        align-items: center;
-        padding: 0 10px;
-        color: white;
-    }
+.line{white-space:pre-wrap; margin:2px 0; line-height:1.4}
+.dim{color:var(--dim)}
+.err{color:var(--err)}
+.dir{color:var(--dir); font-weight:600}
+.path{color:var(--path)}
+.cmd{color:var(--cmd)}
 
-    /* Window now responsive */
-    .window {
-        position: absolute;
-        width: min(600px, 95vw);
-        height: min(400px, 70vh);
-        background: #0b1220;
-        border: 1px solid #334155;
-        border-radius: 10px;
-        overflow: hidden;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    }
+.prompt{
+    display:flex;
+    gap:10px;
+    align-items:center;
+}
 
-    .titlebar {
-        background: #1f2937;
-        padding: 8px;
-        cursor: grab;
-        display: flex;
-        justify-content: space-between;
-        color: white;
-        user-select: none;
-    }
+input{
+    flex:1;
+    background:transparent;
+    border:none;
+    outline:none;
+    color:var(--text);
+    font:inherit;
+}
 
-    .content {
-        padding: 10px;
-        color: #22c55e;
-        height: calc(100% - 35px);
-        overflow-y: auto;
-        font-size: 14px;
-    }
-
-    input {
-        width: 100%;
-        background: transparent;
-        border: none;
-        color: #22c55e;
-        outline: none;
-        font-family: monospace;
-        font-size: 14px;
-    }
-
-    /* Mobile fullscreen behavior */
-    @media (max-width: 600px) {
-        .window {
-            width: 100vw;
-            height: calc(100vh - 40px);
-            top: 0 !important;
-            left: 0 !important;
-            border-radius: 0;
-        }
-
-        #taskbar {
-            height: 40px;
-        }
-    }
 </style>
 </head>
+
 <body>
+<div id="terminal">
+    <div id="log"></div>
 
-<div id="desktop">
-    <div class="icon" onclick="openTerminal()">
-        🖥️<br>Terminal
+    <div class="prompt">
+        <span class="path" id="p">~</span> $
+        <input id="i" autofocus autocomplete="off" spellcheck="false">
     </div>
-
-    <div id="taskbar">Fake Linux OS</div>
 </div>
 
 <script>
-let fs = {
-    "/": {
-        "home": {
-            "user": {
-                "hello.txt": "Hello from Fake Linux OS!",
-                "notes.txt": "This is a virtual filesystem."
-            }
-        },
-        "etc": {
-            "config.txt": "kernel=false"
-        }
-    }
+let fs = JSON.parse(localStorage.getItem("fs") || "null") || {
+"/":{
+  home:{user:{
+    "readme.txt":"Welcome to LunaOS Terminal+",
+  }},
+  etc:{},
+  bin:{}
+}}
+;
+
+let cwd="/home/user";
+let hist=[], hi=-1;
+
+const log=document.getElementById("log");
+const input=document.getElementById("i");
+const prompt=document.getElementById("p");
+
+const print=(t,c="")=>{
+  const d=document.createElement("div");
+  d.className="line "+c;
+  d.innerHTML=t;
+  log.appendChild(d);
+  document.getElementById("terminal").scrollTop=1e9;
 };
 
-let cwd = "/";
+const save=()=>localStorage.setItem("fs",JSON.stringify(fs));
 
-function getPathObj(path) {
-    let parts = path.split("/").filter(Boolean);
-    let node = fs["/"];
-    for (let p of parts) {
-        if (node[p]) node = node[p];
-        else return null;
-    }
-    return node;
+function get(path){
+  if(path==="/")return fs["/"];
+  let n=fs["/"];
+  for(const p of path.split("/").filter(Boolean)){
+    if(!n[p])return null;
+    n=n[p];
+  }
+  return n;
 }
 
-function openTerminal() {
-    let win = document.createElement("div");
-    win.className = "window";
-    win.style.top = "100px";
-    win.style.left = "100px";
-
-    win.innerHTML = `
-        <div class="titlebar">
-            <span>terminal</span>
-            <span onclick="this.closest('.window').remove()" style="cursor:pointer;">✖</span>
-        </div>
-        <div class="content" id="term"></div>
-    `;
-
-    document.getElementById("desktop").appendChild(win);
-
-    let term = win.querySelector("#term");
-
-    function print(text) {
-        term.innerHTML += text + "<br>";
-        term.scrollTop = term.scrollHeight;
-    }
-
-    function prompt() {
-        term.innerHTML += `<span>${cwd} $ </span>
-        <input id="cmd" autofocus />`;
-
-        let input = term.querySelector("#cmd");
-        input.focus();
-
-        input.addEventListener("keydown", function(e) {
-            if (e.key === "Enter") {
-                let val = input.value.trim();
-                term.removeChild(input);
-
-                handleCommand(val, print);
-                prompt();
-            }
-        });
-    }
-
-    function handleCommand(cmd, print) {
-        let parts = cmd.split(" ");
-        let c = parts[0];
-
-        if (c === "help") {
-            print("Commands: ls, cat, cd, clear, help");
-        }
-
-        else if (c === "ls") {
-            let node = getPathObj(cwd);
-            print(Object.keys(node).join("  "));
-        }
-
-        else if (c === "cd") {
-            let target = parts[1];
-            if (!target) return;
-            if (target === "..") {
-                cwd = "/";
-            } else {
-                cwd = cwd.endsWith("/") ? cwd + target : cwd + "/" + target;
-            }
-        }
-
-        else if (c === "cat") {
-            let file = parts[1];
-            let node = getPathObj(cwd);
-            if (node[file]) print(node[file]);
-            else print("No such file");
-        }
-
-        else if (c === "clear") {
-            term.innerHTML = "";
-        }
-
-        else {
-            print("command not found");
-        }
-    }
-
-    print("Fake Linux Terminal v1");
-    prompt();
-
-    makeDraggable(win);
+function resolve(base,t){
+  if(!t) return base;
+  if(t==="~") return "/home/user";
+  let p=(t[0]=="/"?t:base+"/"+t).split("/");
+  let s=[];
+  for(const x of p){
+    if(!x||x===".")continue;
+    if(x==="..")s.pop();
+    else s.push(x);
+  }
+  return "/"+s.join("/");
 }
 
-/* Drag support */
-function makeDraggable(win) {
-    let bar = win.querySelector(".titlebar");
-    let offsetX, offsetY, dragging = false;
+function list(dir){
+  return Object.entries(dir).map(([k,v])=>{
+    return typeof v==="object"
+      ? `<span class="dir">${k}/</span>`
+      : k;
+  }).join("  ");
+}
 
-    bar.addEventListener("mousedown", e => {
-        dragging = true;
-        offsetX = e.clientX - win.offsetLeft;
-        offsetY = e.clientY - win.offsetTop;
-    });
+input.addEventListener("keydown",async e=>{
+  if(e.key==="Enter"){
+    const raw=input.value.trim();
+    const shown=cwd.replace("/home/user","~");
 
-    document.addEventListener("mousemove", e => {
-        if (dragging) {
-            win.style.left = (e.clientX - offsetX) + "px";
-            win.style.top = (e.clientY - offsetY) + "px";
-        }
-    });
+    print(`<span class="path">${shown}</span> $ ${raw}`);
 
-    document.addEventListener("mouseup", () => dragging = false);
+    if(raw){
+      hist.push(raw); hi=hist.length;
+      await exec(raw);
+    }
+
+    input.value="";
+    prompt.textContent=cwd.replace("/home/user","~");
+  }
+
+  if(e.key==="ArrowUp"){
+    if(hi>0) input.value=hist[--hi];
+  }
+
+  if(e.key==="ArrowDown"){
+    if(hi<hist.length-1) input.value=hist[++hi];
+    else input.value="";
+  }
+
+  if(e.key==="Tab"){
+    e.preventDefault();
+    const cmds=["ls","cd","cat","mkdir","touch","rm","echo","clear","help","pwd","history"];
+    const val=input.value.trim();
+    const match=cmds.find(c=>c.startsWith(val));
+    if(match) input.value=match;
+  }
+});
+
+async function exec(raw){
+  const [cmd,...a]=raw.split(" ");
+  const p=a.join(" ");
+
+  switch(cmd){
+
+  case "help":
+    print("ls cd cat mkdir touch rm echo clear pwd history");
+    break;
+
+  case "pwd":
+    print(cwd);
+    break;
+
+  case "ls":{
+    const d=get(cwd);
+    print(list(d||{}));
+    break;
+  }
+
+  case "cd":{
+    const t=resolve(cwd,p);
+    const n=get(t);
+    if(n&&typeof n==="object")cwd=t;
+    else print("no such dir","err");
+    break;
+  }
+
+  case "cat":{
+    const f=get(resolve(cwd,p));
+    if(typeof f==="string") print(f.replace(/\n/g,"<br>"));
+    else print("not a file","err");
+    break;
+  }
+
+  case "mkdir":{
+    const d=get(cwd);
+    d[p]={};
+    save();
+    break;
+  }
+
+  case "touch":{
+    const d=get(cwd);
+    d[p]="";
+    save();
+    break;
+  }
+
+  case "rm":{
+    const d=get(cwd);
+    delete d[p];
+    save();
+    break;
+  }
+
+  case "echo":
+    print(p);
+    break;
+
+  case "history":
+    print(hist.join("<br>"));
+    break;
+
+  case "clear":
+    log.innerHTML="";
+    break;
+
+  default:
+    if(cmd) print("command not found","err");
+  }
 }
 </script>
-
 </body>
 </html>
